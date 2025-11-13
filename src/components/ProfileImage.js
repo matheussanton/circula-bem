@@ -49,7 +49,7 @@ const ProfileImage = ({
     <Image
       source={{ uri: imageUrl }}
       style={containerStyle}
-      onError={() => {
+      onError={(error) => {
         // Se falhar ao carregar, você pode implementar um estado de erro aqui
         console.log('Erro ao carregar imagem de perfil:', imageUrl);
       }}
