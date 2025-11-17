@@ -25,6 +25,8 @@ import RentDetailScreen from '../screens/RentDetailScreen';
 import GroupsScreen from '../screens/GroupsScreen';
 import AccountScreen from '../screens/AccountScreen';
 import MainLayout from '../components/MainLayout';
+import ProductMapScreen from '../screens/ProductMapScreen';
+import MapPickerFullScreen from '../screens/MapPickerFullScreen';
 
 const Stack = createStackNavigator();
 
@@ -53,6 +55,8 @@ const AppNavigator = () => {
       </Stack.Screen>
       <Stack.Screen name="SearchResults" component={SearchResultsScreen} options={{ title: 'Procurar Resultados' }} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Detalhes do produto' }} />
+      <Stack.Screen name="ProductMap" component={ProductMapScreen} options={{ title: 'Localização do Produto' }} />
+      <Stack.Screen name="MapPickerFull" component={MapPickerFullScreen} options={{ title: 'Escolher localização' }} />
       <Stack.Screen name="SelectDate" component={SelectDateScreen} options={{ title: 'Selecione a data' }} />
       <Stack.Screen name="FinalizeRental" component={FinalizeRentalScreen} options={{ title: 'Finalizar aluguel' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifcações' }} />

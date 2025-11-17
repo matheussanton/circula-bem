@@ -19,6 +19,7 @@ import { fetchCategories } from '../services/categoryService';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MapPicker from '../components/MapPicker';
 
 const CreateProduct = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -29,6 +30,8 @@ const CreateProduct = ({ navigation }) => {
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDays, setSelectedDays] = useState([]);
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
 
   const weekDays = [
     'domingo',
@@ -130,6 +133,26 @@ const CreateProduct = ({ navigation }) => {
         return;
       }
       
+      // Validar latitude/longitude (opcionais)
+      let latNum = null;
+      let lngNum = null;
+      if (lat) {
+        const v = parseFloat(lat.replace(',', '.'));
+        if (isNaN(v) || v < -90 || v > 90) {
+          Alert.alert('Erro', 'Latitude inválida (-90 a 90).');
+          return;
+        }
+        latNum = v;
+      }
+      if (lng) {
+        const v = parseFloat(lng.replace(',', '.'));
+        if (isNaN(v) || v < -180 || v > 180) {
+          Alert.alert('Erro', 'Longitude inválida (-180 a 180).');
+          return;
+        }
+        lngNum = v;
+      }
+
       const productData = {
         id: uuidv4(),
         name: name.trim(),
@@ -137,7 +160,9 @@ const CreateProduct = ({ navigation }) => {
         price: parsedPrice,
         category_id: categoryId,
         availabilities: formattedDays,
-        user_id: userId
+        user_id: userId,
+        ...(latNum !== null ? { lat: latNum } : {}),
+        ...(lngNum !== null ? { lng: lngNum } : {})
       };
       
       console.log('Dados do produto a ser criado:', productData);
@@ -257,6 +282,20 @@ const CreateProduct = ({ navigation }) => {
                 />
               </View>
               <Text style={styles.priceHint}>Deixe 0,00 para produtos gratuitos</Text>
+            </View>
+
+            <View style={{ marginTop: 8 }}>
+              <MapPicker
+                value={{
+                  lat: lat ? parseFloat(lat.replace(',', '.')) : null,
+                  lng: lng ? parseFloat(lng.replace(',', '.')) : null,
+                }}
+                onChange={({ lat: nlat, lng: nlng }) => {
+                  setLat(nlat != null ? String(nlat) : '');
+                  setLng(nlng != null ? String(nlng) : '');
+                }}
+                height={240}
+              />
             </View>
           </View>
 

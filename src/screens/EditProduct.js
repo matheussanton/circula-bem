@@ -17,6 +17,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { updateProduct, deleteProduct, uploadMultipleProductImages, fetchProductForEdit } from '../services/productService';
 import { fetchCategories } from '../services/categoryService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MapPicker from '../components/MapPicker';
 
 const EditProduct = ({ route, navigation }) => {
   const { product } = route.params;
@@ -31,6 +32,8 @@ const EditProduct = ({ route, navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [selectedDays, setSelectedDays] = useState([]);
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
 
   const weekDays = [
     'domingo',
@@ -69,6 +72,16 @@ const EditProduct = ({ route, navigation }) => {
       setPrice(productData.price ? productData.price.toString().replace('.', ',') : '');
       setCategoryId(productData.category_id || '');
       setExistingImages(productData.images || []);
+      setLat(
+        typeof productData.lat === 'number'
+          ? String(productData.lat).replace('.', ',')
+          : ''
+      );
+      setLng(
+        typeof productData.lng === 'number'
+          ? String(productData.lng).replace('.', ',')
+          : ''
+      );
       
       // Carregar disponibilidades
       if (productData.availabilities) {
@@ -166,6 +179,28 @@ const EditProduct = ({ route, navigation }) => {
         category_id: categoryId,
         availabilities: formattedDays,
       };
+
+      // Validar latitude/longitude (opcionais)
+      if (lat) {
+        const v = parseFloat(lat.replace(',', '.'));
+        if (isNaN(v) || v < -90 || v > 90) {
+          Alert.alert('Erro', 'Latitude inválida (-90 a 90).');
+          return;
+        }
+        updateData.lat = v;
+      } else {
+        updateData.lat = null;
+      }
+      if (lng) {
+        const v = parseFloat(lng.replace(',', '.'));
+        if (isNaN(v) || v < -180 || v > 180) {
+          Alert.alert('Erro', 'Longitude inválida (-180 a 180).');
+          return;
+        }
+        updateData.lng = v;
+      } else {
+        updateData.lng = null;
+      }
       
       console.log('Dados do produto a ser atualizado:', updateData);
       
@@ -392,6 +427,22 @@ const EditProduct = ({ route, navigation }) => {
                   </TouchableOpacity>
                 ))}
               </View>
+            </View>
+
+            {/* Localização (opcional) */}
+            <View style={styles.formSection}>
+              <Text style={styles.sectionTitle}>Localização (opcional)</Text>
+              <MapPicker
+                value={{
+                  lat: lat ? parseFloat(lat.replace(',', '.')) : null,
+                  lng: lng ? parseFloat(lng.replace(',', '.')) : null,
+                }}
+                onChange={({ lat: nlat, lng: nlng }) => {
+                  setLat(nlat != null ? String(nlat) : '');
+                  setLng(nlng != null ? String(nlng) : '');
+                }}
+                height={240}
+              />
             </View>
 
             <TouchableOpacity

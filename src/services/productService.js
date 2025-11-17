@@ -4,6 +4,25 @@ import { v4 as uuidv4 } from 'uuid';
 import { getTable } from './supabaseClient';
 import { formatPrice, formatTotalAmount } from '../utils/priceUtils';
 
+const deg2rad = (deg) => (deg * Math.PI) / 180;
+const earthKmPerDeg = 111.32;
+
+const haversineKm = (lat1, lon1, lat2, lon2) => {
+  if (
+    typeof lat1 !== 'number' || typeof lon1 !== 'number' ||
+    typeof lat2 !== 'number' || typeof lon2 !== 'number'
+  ) return null;
+  const R = 6371; // km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 export const createProduct = async (productData) => {
   try {
     const token = await AsyncStorage.getItem('token');
@@ -163,6 +182,91 @@ export const fetchProducts = async () => {
     console.error('Erro ao buscar produtos:', error);
     throw new Error(error.message || 'Falha ao buscar produtos');
   }
+};
+
+/**
+ * Search products with optional term/category and optional geospatial bounding box.
+ * params: {
+ *   q?: string,
+ *   categoryId?: string|number,
+ *   center?: { lat: number, lng: number },
+ *   radiusKm?: number, // default 25
+ *   from?: number, to?: number
+ * }
+ */
+export const searchProducts = async ({
+  q = '',
+  categoryId = null,
+  center = null,
+  radiusKm = 25,
+  from = 0,
+  to = 19
+} = {}) => {
+  const token = await AsyncStorage.getItem('token');
+  const headers = {
+    'apikey': SUPABASE_CONFIG.KEY,
+    'Authorization': `Bearer ${token || SUPABASE_CONFIG.KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+
+  // Build filters
+  const filters = [];
+  if (q) {
+    const enc = encodeURIComponent(q);
+    filters.push(`or=(name.ilike.*${enc}*,description.ilike.*${enc}*)`);
+  }
+  if (categoryId) {
+    filters.push(`category_id=eq.${categoryId}`);
+  }
+
+  // Geo bounding box (approx) if center provided
+  if (center?.lat != null && center?.lng != null && radiusKm > 0) {
+    const dLat = radiusKm / earthKmPerDeg;
+    const dLng = radiusKm / (earthKmPerDeg * Math.cos(deg2rad(center.lat) || 1));
+    const minLat = center.lat - dLat;
+    const maxLat = center.lat + dLat;
+    const minLng = center.lng - dLng;
+    const maxLng = center.lng + dLng;
+    filters.push(`lat=gte.${minLat}`);
+    filters.push(`lat=lte.${maxLat}`);
+    filters.push(`lng=gte.${minLng}`);
+    filters.push(`lng=lte.${maxLng}`);
+  }
+
+  const select = `select=*,product_images:product_images(image_url,product_id)`;
+  const limit = `&limit=${Math.max(1, (to - from + 1))}`;
+  const offset = `&offset=${Math.max(0, from)}`;
+  const query = filters.length > 0 ? `?${filters.join('&')}` : '?';
+  const url = `${SUPABASE_CONFIG.URL}/rest/v1/products${query}&${select}${limit}${offset}`;
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erro ao buscar: ${res.status} - ${text}`);
+  }
+  const data = await res.json();
+  const products = (data || []).map(p => ({
+    ...p,
+    product_images: (p.product_images || []).sort((a, b) => {
+      if (!a.image_url || !b.image_url) return 0;
+      return a.image_url > b.image_url ? 1 : -1;
+    })
+  }));
+
+  // If we have a center, compute distances and sort by proximity
+  if (center?.lat != null && center?.lng != null) {
+    products.forEach(p => {
+      p.distanceKm = haversineKm(center.lat, center.lng, p.lat, p.lng);
+    });
+    products.sort((a, b) => {
+      const da = a.distanceKm ?? Number.POSITIVE_INFINITY;
+      const db = b.distanceKm ?? Number.POSITIVE_INFINITY;
+      return da - db;
+    });
+  }
+
+  return products;
 };
 
 export const fetchProductById = async (productId) => {

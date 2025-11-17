@@ -8,6 +8,8 @@ import { fetchProducts } from '../services/productService';
 import { fetchUserById } from '../services/api';
 import ProfileImage from '../components/ProfileImage';
 import { formatPrice } from '../utils/priceUtils';
+import ProductCard from '../components/ProductCard';
+import * as Location from 'expo-location';
 
 const INFO_CARDS = [
   { icon: 'clock-outline', label: 'Ativos', value: 5 },
@@ -26,6 +28,7 @@ const HomeScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeCenter, setActiveCenter] = useState(null);
 
   const loadData = async () => {
     try {
@@ -56,6 +59,44 @@ const HomeScreen = () => {
     loadData();
   }, []);
 
+  // Obter localização atual (opcional) para exibir distância
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setActiveCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      } catch {}
+    })();
+  }, []);
+
+  const deg2rad = (deg) => (deg * Math.PI) / 180;
+  const haversineKm = (lat1, lon1, lat2, lon2) => {
+    if (
+      typeof lat1 !== 'number' || typeof lon1 !== 'number' ||
+      typeof lat2 !== 'number' || typeof lon2 !== 'number'
+    ) return null;
+    const R = 6371;
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Anexar distância aos produtos quando possível
+  const productsWithDistance = useMemo(() => {
+    if (!activeCenter) return products;
+    return products.map(p => {
+      const d = haversineKm(activeCenter.lat, activeCenter.lng, p.lat, p.lng);
+      return d != null ? { ...p, distanceKm: d } : p;
+    });
+  }, [products, activeCenter]);
+
   const onRefresh = () => {
     setRefreshing(true);
     loadData();
@@ -72,31 +113,32 @@ const HomeScreen = () => {
     setAppliedSearchQuery('');
   }, []);
 
+  const goToSearchResults = useCallback(() => {
+    navigation.navigate('SearchResults', {
+      q: searchQuery || '',
+      // categoryId could be wired from a selected chip; keeping null for now
+      categoryId: null,
+      // Let the results screen fallback to current location; or pass a center here if you have it
+      center: null,
+      radiusKm: 25
+    });
+  }, [navigation, searchQuery]);
+
   // Memorizar os produtos filtrados
   const filteredProducts = useMemo(() => {
-    return products.filter(product =>
+    return productsWithDistance.filter(product =>
       product.name?.toLowerCase().includes(appliedSearchQuery.toLowerCase())
     );
-  }, [products, appliedSearchQuery]);
+  }, [productsWithDistance, appliedSearchQuery]);
 
   // Memorizar o renderItem para evitar re-criações
   const renderProductItem = useCallback(({ item }) => {
-    // Busca a imagem que termina com _0.jpg
-    const previewImage = item.product_images?.find(img =>
-      img.image_url && img.image_url.endsWith('_0.jpg')
-    );
     return (
-      <TouchableOpacity
-        style={styles.productCard}
+      <ProductCard
+        product={item}
         onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
-      >
-        <Image
-          source={{ uri: previewImage?.image_url || 'https://via.placeholder.com/150' }}
-          style={styles.productImage}
-        />
-        <Text style={styles.productTitle}>{item.name}</Text>
-        <Text style={styles.productPrice}>{formatPrice(item.price)}</Text>
-      </TouchableOpacity>
+        showDistance={true}
+      />
     );
   }, [navigation]);
 
@@ -125,24 +167,12 @@ const HomeScreen = () => {
         </View>
 
         {/* Search Bar fixo */}
-        <View style={styles.searchContainer}>
+        <TouchableOpacity style={styles.searchContainer} activeOpacity={0.9} onPress={goToSearchResults}>
           <MaterialCommunityIcons name="magnify" size={22} color="#B0B0B0" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchBar}
-            placeholder="Buscar produtos..."
-            placeholderTextColor="#B0B0B0"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onBlur={applySearch}
-            onSubmitEditing={applySearch}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-              <MaterialCommunityIcons name="close" size={20} color="#B0B0B0" />
-            </TouchableOpacity>
-          )}
-        </View>
+          <View style={styles.searchBar}>
+            <Text style={{ color: '#B0B0B0', fontSize: 16 }}>Inicie sua busca</Text>
+          </View>
+        </TouchableOpacity>
 
         {/* Conteúdo scrollável */}
         <FlatList
@@ -164,9 +194,9 @@ const HomeScreen = () => {
 
               {/* Categories */}
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Categories</Text>
+                <Text style={styles.sectionTitle}>Categorias</Text>
                 <TouchableOpacity>
-                  <Text style={styles.viewAll}>View All</Text>
+                  <Text style={styles.viewAll}>Ver todas</Text>
                 </TouchableOpacity>
               </View>
               {isLoading ? (
@@ -197,7 +227,7 @@ const HomeScreen = () => {
 
               {/* Products Header */}
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Products</Text>
+                <Text style={styles.sectionTitle}>Produtos perto de você</Text>
               </View>
 
               {/* Products Grid */}
@@ -369,41 +399,6 @@ const styles = StyleSheet.create({
   productsGrid: {
     paddingHorizontal: 10,
     paddingBottom: 100,
-  },
-  productCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    margin: 8,
-    flex: 1,
-    alignItems: 'center',
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-    minWidth: 150,
-    maxWidth: '48%',
-  },
-  productImage: {
-    width: 90,
-    height: 90,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#eee',
-  },
-  productTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#222',
-    textAlign: 'center',
-  },
-  productPrice: {
-    fontSize: 13,
-    color: '#4F8CFF',
-    marginTop: 2,
-    fontWeight: 'bold',
-    textAlign: 'center',
   },
   loadingContainer: {
     padding: 20,

@@ -1,0 +1,107 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.addresses (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  cep text NOT NULL,
+  state character NOT NULL,
+  city character varying NOT NULL,
+  neighborhood character varying NOT NULL,
+  street character varying NOT NULL,
+  number smallint NOT NULL,
+  complement character varying NOT NULL,
+  user_id uuid DEFAULT auth.uid(),
+  CONSTRAINT addresses_pkey PRIMARY KEY (id),
+  CONSTRAINT adresses_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  description text NOT NULL UNIQUE,
+  image_url text NOT NULL,
+  CONSTRAINT categories_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.group_members (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  group_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  role USER-DEFINED,
+  status USER-DEFINED,
+  invited_by uuid NOT NULL,
+  joined_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT group_members_pkey PRIMARY KEY (id),
+  CONSTRAINT group_members_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
+  CONSTRAINT group_members_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES auth.users(id),
+  CONSTRAINT group_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.group_products (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_id uuid,
+  product_id uuid,
+  status USER-DEFINED,
+  CONSTRAINT group_products_pkey PRIMARY KEY (id),
+  CONSTRAINT group_products_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
+  CONSTRAINT group_products_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
+);
+CREATE TABLE public.groups (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying,
+  description text,
+  created_at date DEFAULT now(),
+  image_url text,
+  handle character varying,
+  invite_link character varying,
+  CONSTRAINT groups_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.product_images (
+  id uuid NOT NULL,
+  product_id uuid NOT NULL,
+  image_url character varying NOT NULL,
+  CONSTRAINT product_images_pkey PRIMARY KEY (id),
+  CONSTRAINT product_images_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
+);
+CREATE TABLE public.products (
+  id uuid NOT NULL,
+  name character varying NOT NULL,
+  description character varying NOT NULL,
+  price numeric NOT NULL,
+  category_id uuid NOT NULL,
+  availabilities ARRAY NOT NULL,
+  user_id uuid DEFAULT auth.uid(),
+  lat double precision CHECK (lat IS NULL OR lat >= '-90'::integer::double precision AND lat <= 90::double precision),
+  lng double precision CHECK (lng IS NULL OR lng >= '-180'::integer::double precision AND lng <= 180::double precision),
+  geog USER-DEFINED,
+  CONSTRAINT products_pkey PRIMARY KEY (id),
+  CONSTRAINT product_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id),
+  CONSTRAINT products_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.rents (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  product_id uuid,
+  user_id uuid,
+  status USER-DEFINED,
+  total_amount integer,
+  dates ARRAY,
+  CONSTRAINT rents_pkey PRIMARY KEY (id),
+  CONSTRAINT rents_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id),
+  CONSTRAINT rents_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.spatial_ref_sys (
+  srid integer NOT NULL CHECK (srid > 0 AND srid <= 998999),
+  auth_name character varying,
+  auth_srid integer,
+  srtext character varying,
+  proj4text character varying,
+  CONSTRAINT spatial_ref_sys_pkey PRIMARY KEY (srid)
+);
+CREATE TABLE public.user_extra_information (
+  registration_number character varying NOT NULL UNIQUE,
+  first_name character varying NOT NULL,
+  last_name character varying NOT NULL,
+  user_id uuid DEFAULT auth.uid(),
+  image_url character varying,
+  subscription USER-DEFINED DEFAULT 'free'::user_subscription,
+  phone_number text,
+  CONSTRAINT user_extra_information_pkey PRIMARY KEY (registration_number),
+  CONSTRAINT user_extra_information_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);

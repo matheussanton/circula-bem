@@ -1,10 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, ScrollView, SafeAreaView } from 'react-native';
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchProductById } from '../services/productService';
 import { fetchUserById } from '../services/api';
+import { fetchCategories } from '../services/categoryService';
+import { registerCallback } from '../services/callbackRegistry';
+import { v4 as uuidv4 } from 'uuid';
 import ProfileImage from '../components/ProfileImage';
 import { formatPrice } from '../utils/priceUtils';
+import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Platform, TextInput, ScrollView as RNScroll } from 'react-native';
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { productId } = route.params;
@@ -13,6 +18,11 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const windowWidth = Dimensions.get('window').width;
+  const [categories, setCategories] = useState([]);
+  const [activeCat, setActiveCat] = useState(null);
+  const [tempQ, setTempQ] = useState('');
+  const [tempCenter, setTempCenter] = useState(null);
+  const [tempRadius, setTempRadius] = useState(25);
 
   useEffect(() => {
     const loadProductDetails = async () => {
@@ -33,6 +43,50 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
     loadProductDetails();
   }, [productId]);
+
+  useEffect(() => {
+    fetchCategories().then(setCategories).catch(() => {});
+  }, []);
+
+  const hasCoords = typeof product?.lat === 'number' && typeof product?.lng === 'number';
+  const RADIUS_METERS = 500; // 1km diameter
+
+  // Compute a random point inside the circle around product coords
+  const [randPoint, setRandPoint] = useState(null);
+  useEffect(() => {
+    if (!hasCoords) return;
+    const generateRandomPoint = () => {
+      // Polar method
+      const t = 2 * Math.PI * Math.random();
+      const u = Math.random() + Math.random();
+      const r = (u > 1 ? 2 - u : u); // in [0,1], more uniform-ish
+      const dist = r * RADIUS_METERS; // meters
+
+      const lat = product.lat;
+      const lng = product.lng;
+      const metersPerDegLat = 111320;
+      const metersPerDegLng = 111320 * Math.cos((lat * Math.PI) / 180) || 1;
+      const dLat = (Math.sin(t) * dist) / metersPerDegLat;
+      const dLng = (Math.cos(t) * dist) / metersPerDegLng;
+      return { latitude: lat + dLat, longitude: lng + dLng };
+    };
+    setRandPoint(generateRandomPoint());
+  }, [hasCoords, product?.lat, product?.lng]);
+
+  const miniRegion = useMemo(() => {
+    if (!randPoint) return null;
+    const lat = randPoint.latitude;
+    const metersPerDegLat = 111320;
+    const latDelta = (RADIUS_METERS / metersPerDegLat) * 6; // zoom to show circle nicely
+    const lngDelta =
+      (RADIUS_METERS / (111320 * Math.cos((lat * Math.PI) / 180) || 1)) * 6;
+    return {
+      latitude: lat,
+      longitude: randPoint.longitude,
+      latitudeDelta: Math.max(0.002, latDelta),
+      longitudeDelta: Math.max(0.002, lngDelta),
+    };
+  }, [randPoint]);
 
   if (loading) {
     return (
@@ -122,16 +176,111 @@ const ProductDetailScreen = ({ route, navigation }) => {
             <Text style={styles.priceLabel}>/ dia</Text>
           </View>
 
-          <Text style={styles.location}>
+          {/* <Text style={styles.location}>
             {renter?.addresses?.[0] 
               ? `${renter.addresses[0].neighborhood}, ${renter.addresses[0].city} - ${renter.addresses[0].state}` 
               : 'Localização não disponível'}
-          </Text>
+          </Text> */}
+
+          {hasCoords && miniRegion && randPoint && (
+            <View style={styles.mapBlock}>
+              <MapView
+                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+                style={styles.miniMap}
+                initialRegion={miniRegion}
+                pointerEvents="none"
+              >
+                <Circle
+                  center={randPoint}
+                  radius={RADIUS_METERS}
+                  strokeColor="rgba(79,140,255,0.8)"
+                  fillColor="rgba(79,140,255,0.2)"
+                />
+              </MapView>
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate('ProductMap', {
+                    center: { lat: product.lat, lng: product.lng },
+                    radiusMeters: RADIUS_METERS,
+                    productName: product.name,
+                  })
+                }
+                style={styles.viewMapBtn}
+              >
+                <MaterialCommunityIcons name="map-search-outline" size={18} color="#4F8CFF" />
+                <Text style={styles.viewMapText}>Ver no mapa</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={styles.ratingContainer}>
             <FontAwesome name="star" size={14} color="#FFD700" />
             <Text style={styles.ratingText}>4.7</Text>
             <Text style={styles.reviewCount}>(64 avaliações)</Text>
+          </View>
+
+          {/* Buscar similares */}
+          <View style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, marginBottom: 16 }}>
+            <Text style={{ fontWeight: '700', color: '#0F172A', marginBottom: 8 }}>Buscar similares</Text>
+
+            <TouchableOpacity
+              style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}
+              onPress={() => {
+                const cbKey = uuidv4();
+                registerCallback(cbKey, ({ lat, lng }) => setTempCenter({ lat, lng }));
+                navigation.navigate('MapPickerFull', {
+                  initial: product?.lat && product?.lng ? { latitude: product.lat, longitude: product.lng } : null,
+                  callbackKey: cbKey,
+                });
+              }}
+            >
+              <MaterialCommunityIcons name="map-marker-outline" size={20} color="#334155" style={{ marginRight: 8 }} />
+              <Text style={{ color: '#334155' }}>{tempCenter ? 'Endereço selecionado' : 'Escolher endereço'}</Text>
+            </TouchableOpacity>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {categories.map(c => (
+                <TouchableOpacity
+                  key={c.id}
+                  style={{ backgroundColor: activeCat === c.id ? '#4F8CFF' : '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, marginRight: 8 }}
+                  onPress={() => setActiveCat(prev => (prev === c.id ? null : c.id))}
+                >
+                  <Text style={{ color: activeCat === c.id ? '#fff' : '#1F2937', fontWeight: '600' }}>{c.description}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View style={{ backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <MaterialCommunityIcons name="magnify" size={20} color="#64748B" style={{ marginRight: 8 }} />
+              <TextInput
+                style={{ flex: 1, color: '#0F172A' }}
+                placeholder="Nome do produto"
+                placeholderTextColor="#94A3B8"
+                onChangeText={setTempQ}
+              />
+            </View>
+
+            <View style={{ flexDirection: 'row' }}>
+              {[5, 10, 25, 50].map(v => (
+                <TouchableOpacity key={v} onPress={() => setTempRadius(v)} style={{ backgroundColor: tempRadius === v ? '#4F8CFF' : '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, marginRight: 8 }}>
+                  <Text style={{ color: tempRadius === v ? '#fff' : '#1F2937', fontWeight: '600' }}>{v} km</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={{ marginTop: 10, backgroundColor: '#4F8CFF', borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}
+              onPress={() =>
+                navigation.navigate('SearchResults', {
+                  q: tempQ || '',
+                  categoryId: activeCat || null,
+                  center: tempCenter || (product?.lat && product?.lng ? { lat: product.lat, lng: product.lng } : null),
+                  radiusKm: tempRadius || 25
+                })
+              }
+            >
+              <Text style={{ color: '#fff', fontWeight: '800' }}>Buscar</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Seller Info */}
@@ -338,6 +487,38 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     color: '#4F8CFF',
     marginTop: 2,
+  },
+  mapBlock: {
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#EAF1FF',
+  },
+  miniMap: {
+    width: '100%',
+    height: 160,
+  },
+  viewMapBtn: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  viewMapText: {
+    color: '#4F8CFF',
+    fontWeight: '700',
   },
   availabilityContainer: {
     marginBottom: 20,

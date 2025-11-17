@@ -1,0 +1,120 @@
+### Plano detalhado (checklist reutilizável)
+
+- Preparação (UX/escopo)
+  - Definir a experiência: “O que?” (texto) + “Onde?” (cidade/país) + “Categoria” (chips) → resultados com lista e chips de filtros.
+  - Estados: carregando, vazio, erro, paginação.
+  - Métrica de sucesso: tempo até primeiro resultado, CTR dos resultados, taxa de refinamento.
+
+- Dados/assunções
+  - `addresses` tem `user_id`, `city`, `state`, `country` (já usados no cadastro).
+  - `products` tem `user_id`, `category_id`, `name`, `description`, `price`.
+  - Não há geolocalização ainda; fase 1 usa filtros por cidade/estado/país; fase 2 adiciona lat/lng e raio.
+
+- Serviço de busca (server-side)
+  - Criar `searchProducts(params)` em `src/services/productService.js`:
+    - Parâmetros: `{ q, categoryId, location: { city, state, country }, from, to }`.
+    - Lógica:
+      - Sem localização: filtrar por `name.ilike.*q*`/`description.ilike.*q*` e `category_id`.
+      - Com localização: buscar `user_id` em `addresses` por `city/state/country` → filtrar `products` por `user_id in (...)` + `q` + `categoryId`.
+      - Selecionar imagens: `select=*,product_images:product_images(image_url,product_id)`.
+      - Paginação: `offset/limit` (ex.: 20 itens).
+    - Saída: array de produtos com `product_images` ordenadas (capa `_0.jpg` primeiro).
+  - Validar limites: truncar `user_id` in-list (ex.: máx. 50 por chamada) e paginar se necessário.
+  - Erros: retornar array vazio em falhas de rede e logar erros.
+
+- Componentes (UI)
+  - `LocationInput` em `src/components/LocationInput.js` (fase 1):
+    - Input único de texto com sugestões simples (histórico local).
+    - Valor estruturado: `{ city, state, country }` (parse básico: “Cidade, País”).
+    - Expor `onChange(location)`.
+  - `CategoryChips` (opcional) em `src/components/CategoryChips.js`:
+    - Reutilizar `fetchCategories` e chips horizontais com `onSelect(categoryId)`.
+
+- Home (lançar a busca)
+  - Arquivo: `src/screens/HomeScreen.js`.
+  - Ações:
+    - Inserir `LocationInput` abaixo da barra de busca atual.
+    - Exibir chips de categorias (reuso do bloco existente).
+    - Ao `submit` ou ao tocar “Buscar”, navegar para `SearchResults`:
+      - Rota: `navigation.navigate('SearchResults', { q, categoryId, location })`.
+    - Remover filtro local por `name` da grade principal para evitar duplicidade (a busca sai da Home).
+
+- Tela de resultados
+  - Arquivo: `src/screens/SearchResultsScreen.js`.
+  - Ações:
+    - Ler `route.params`: `{ q, categoryId, location }`.
+    - Estado: `items`, `loading`, `loadingMore`, `from`, `hasMore`.
+    - Chamar `searchProducts` (PAGE_SIZE=20) com `from/to` (reset e “carregar mais”).
+    - Renderizar:
+      - Chips dos filtros ativos (q, categoria, cidade/estado/país).
+      - `FlatList` com cards (imagem capa, nome, preço com `formatPrice`).
+      - `onEndReached` para paginação; `ListFooterComponent` com spinner.
+      - Estado vazio com sugestões.
+    - Ação de item: navegar para `ProductDetail`.
+
+- Navegação
+  - Arquivo: `src/navigation/AppNavigator.js`.
+  - Validar rota já existente `SearchResults` e navegação com params.
+  - Ajustar título e header se necessário.
+
+- Persistência/qualidade de vida
+  - Histórico de buscas: salvar `{ q, location, categoryId, ts }` em `AsyncStorage` (mostrar como sugestões no `LocationInput`/busca).
+  - Persistir últimos filtros na Home.
+  - Limpar histórico (ação no UI).
+
+- Performance
+  - Paginação por `offset/limit`.
+  - Evitar `fetchProducts` completo na Home quando em modo de busca.
+  - Debounce de 300–500ms para “O que?” (se for buscar on-the-fly no futuro).
+  - Evitar recomputar imagens: ordenar ao receber.
+
+- Estados/erros
+  - Carregamento inicial e ao paginar.
+  - Estado vazio distinto para “sem resultados” vs “erro”.
+  - Retentativa no erro de rede.
+
+- Testes (MVP)
+  - Busca por “monitor” sem localização → resultados contêm “monitor”.
+  - Busca por cidade “Santiago” sem q → apenas produtos de usuários com `addresses.city ilike *Santiago*`.
+  - Busca “monitor” + “Santiago” + categoria → interseção correta.
+  - Paginação: mais de 20 itens carrega ao rolar.
+  - Imagem de capa respeita `_0.jpg`; fallback quando ausente.
+
+- Fase 2 (melhorias)
+  - Autocomplete de lugares (Google Places/Mapbox) → obter `{ lat, lng }`.
+  - Buscar por raio (5–50 km): armazenar lat/lng no endereço e filtrar/ordenar por distância (no SQL ou client-side após paginação).
+  - Toggle Lista/Mapa (`react-native-maps`), pins com callout.
+  - Filtro por datas: excluir produtos com conflito em `rents.dates` no intervalo selecionado.
+  - Ordenação: por preço, distância, mais recentes.
+
+- Observabilidade
+  - Eventos: `search_performed`, `search_results_viewed`, `result_clicked`.
+  - Propriedades: `{ q, categoryId, city/state/country, resultsCount }`.
+
+- Acessibilidade/i18n
+  - Labels/placeholder em PT-BR consistentes.
+  - Tamanho de toque nos chips (mín. 44x44).
+  - Suporte a leitores de tela nos cards.
+
+- Rollout
+  - Atrás de flag para pequenos grupos.
+  - Monitorar métricas, ajustar relevância e ranking.
+
+- Entregáveis principais (MVP)
+  - `searchProducts` em `src/services/productService.js`.
+  - `LocationInput` e (opcional) `CategoryChips` em `src/components/`.
+  - Atualização de `HomeScreen` para lançar a busca.
+  - Implementação completa de `SearchResultsScreen` com paginação e chips.
+
+- Riscos/mitigações
+  - Endereços incompletos → fallback para país/estado; estado vazio com instruções.
+  - Limite de query string (`in.(...)`) → chunk de user_ids ou paginação de `addresses`.
+  - Qualidade de dados de imagens → placeholder confiável.
+
+- Próximos passos rápidos
+  - Criar `searchProducts`.
+  - Implementar `SearchResultsScreen` com paginação.
+  - Adicionar `LocationInput` simples e navegação da Home.
+
+- Resumo
+  - Busca baseada em “O que + Onde + Categoria”, com filtros server-side, paginação, chips e fluxo Home → Resultados.
