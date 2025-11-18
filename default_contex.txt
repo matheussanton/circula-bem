@@ -1,154 +1,102 @@
 # O PROJETO É BRASILEIRO, SEMPRE UTILIZE O PT-BR.
 
-# TABELAS:
+# TABELAS (as json):
 
-create table public.user_extra_information (
-  registration_number character varying not null,
-  first_name character varying(50) not null,
-  last_name character varying(50) not null,
-  user_id uuid null default auth.uid (),
-  image_url character varying null,
-  subscription public.user_subscription null default 'free'::user_subscription,
-  phone_number text null,
-  constraint PK_user primary key (registration_number),
-  constraint user_registrationnumber_key unique (registration_number),
-  constraint user_extra_information_user_id_fkey foreign KEY (user_id) references auth.users (id) on update RESTRICT on delete CASCADE
-) TABLESPACE pg_default;
+[
+  {
+    "table_name": "addresses",
+    "table_ddl": "CREATE TABLE public.addresses (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    cep text NOT NULL,\n    state character(2) NOT NULL,\n    city character varying(100) NOT NULL,\n    neighborhood character varying(100) NOT NULL,\n    street character varying(100) NOT NULL,\n    number smallint NOT NULL,\n    complement character varying(100) NOT NULL,\n    user_id uuid DEFAULT auth.uid(),\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "categories",
+    "table_ddl": "CREATE TABLE public.categories (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    description text NOT NULL,\n    image_url text NOT NULL,\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "group_members",
+    "table_ddl": "CREATE TABLE public.group_members (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    created_at timestamp with time zone NOT NULL DEFAULT now(),\n    group_id uuid NOT NULL,\n    user_id uuid NOT NULL,\n    role group_member_role,\n    status group_member_status,\n    invited_by uuid NOT NULL,\n    joined_at timestamp without time zone NOT NULL DEFAULT now(),\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "group_products",
+    "table_ddl": "CREATE TABLE public.group_products (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    group_id uuid,\n    product_id uuid,\n    status group_product_status,\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "groups",
+    "table_ddl": "CREATE TABLE public.groups (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    name character varying,\n    description text,\n    created_at date DEFAULT now(),\n    image_url text,\n    handle character varying,\n    invite_link character varying,\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "product_images",
+    "table_ddl": "CREATE TABLE public.product_images (\n    id uuid NOT NULL,\n    product_id uuid NOT NULL,\n    image_url character varying(300) NOT NULL,\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "products",
+    "table_ddl": "CREATE TABLE public.products (\n    id uuid NOT NULL,\n    name character varying(100) NOT NULL,\n    description character varying(300) NOT NULL,\n    price numeric(8,2) NOT NULL,\n    category_id uuid NOT NULL,\n    availabilities dia_da_semana[] NOT NULL,\n    user_id uuid DEFAULT auth.uid(),\n    lat double precision,\n    lng double precision,\n    geog geography(Point,4326),\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "rent_media",
+    "table_ddl": "CREATE TABLE public.rent_media (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    rent_id uuid NOT NULL,\n    product_id uuid NOT NULL,\n    uploader_user_id uuid NOT NULL,\n    actor rent_actor NOT NULL,\n    phase rent_media_phase NOT NULL,\n    kind media_kind NOT NULL,\n    storage_bucket text NOT NULL DEFAULT 'rent-media'::text,\n    storage_path text NOT NULL,\n    mime_type text NOT NULL,\n    byte_size integer,\n    width integer,\n    height integer,\n    duration_ms integer,\n    lat double precision,\n    lng double precision,\n    captured_at timestamp with time zone NOT NULL,\n    checksum_sha256 text,\n    raw_metadata jsonb,\n    created_at timestamp with time zone NOT NULL DEFAULT now(),\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "rents",
+    "table_ddl": "CREATE TABLE public.rents (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    product_id uuid,\n    user_id uuid,\n    status rent_status,\n    total_amount integer,\n    dates date[],\n    started_at timestamp with time zone,\n    started_by uuid,\n    ended_at timestamp with time zone,\n    ended_by uuid,\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "spatial_ref_sys",
+    "table_ddl": "CREATE TABLE public.spatial_ref_sys (\n    srid integer NOT NULL,\n    auth_name character varying(256),\n    auth_srid integer,\n    srtext character varying(2048),\n    proj4text character varying(2048),\n    PRIMARY KEY (srid)\n);"
+  },
+  {
+    "table_name": "user_extra_information",
+    "table_ddl": "CREATE TABLE public.user_extra_information (\n    registration_number character varying NOT NULL,\n    first_name character varying(50) NOT NULL,\n    last_name character varying(50) NOT NULL,\n    user_id uuid DEFAULT auth.uid(),\n    image_url character varying,\n    subscription user_subscription DEFAULT 'free'::user_subscription,\n    phone_number text,\n    PRIMARY KEY (registration_number)\n);"
+  }
+]
 
-create table public.rents (
-  id uuid not null default gen_random_uuid (),
-  product_id uuid null,
-  user_id uuid null,
-  status public.rent_status null,
-  total_amount integer null,
-  dates date[] null,
-  constraint rents_pkey primary key (id),
-  constraint rents_product_id_fkey foreign KEY (product_id) references products (id) on update RESTRICT on delete CASCADE,
-  constraint rents_user_id_fkey foreign KEY (user_id) references auth.users (id) on update RESTRICT on delete CASCADE
-) TABLESPACE pg_default;
+# ENUMERATED TYPES (as json):
 
-create index IF not exists "IX_rent_productid" on public.rents using btree (product_id) TABLESPACE pg_default;
-
-create table public.products (
-  id uuid not null,
-  name character varying(100) not null,
-  description character varying(300) not null,
-  price numeric(8, 2) not null,
-  category_id uuid not null,
-  availabilities dia_da_semana[] not null,
-  user_id uuid null default auth.uid (),
-  constraint PK_product primary key (id),
-  constraint product_category_id_fkey foreign KEY (category_id) references categories (id) on delete CASCADE,
-  constraint products_user_id_fkey foreign KEY (user_id) references auth.users (id) on update CASCADE on delete CASCADE
-) TABLESPACE pg_default;
-
-create index IF not exists "IX_product_categoryid" on public.products using btree (category_id) TABLESPACE pg_default;
-
-create table public.product_images (
-  id uuid not null,
-  product_id uuid not null,
-  image_url character varying(300) not null,
-  constraint PK_productimage primary key (id),
-  constraint product_images_product_id_fkey foreign KEY (product_id) references products (id) on update CASCADE on delete CASCADE
-) TABLESPACE pg_default;
-
-create table public.groups (
-  id uuid not null default gen_random_uuid (),
-  name character varying null,
-  description text null,
-  created_at date null default now(),
-  image_url text null,
-  handle character varying null,
-  invite_link character varying null,
-  constraint groups_pkey primary key (id)
-) TABLESPACE pg_default;
-
-create table public.group_members (
-  id uuid not null default gen_random_uuid (),
-  created_at timestamp with time zone not null default now(),
-  group_id uuid not null,
-  user_id uuid not null,
-  role public.group_member_role null,
-  status public.group_member_status null,
-  invited_by uuid not null,
-  joined_at timestamp without time zone not null default now(),
-  constraint group_members_pkey primary key (id),
-  constraint group_members_group_id_fkey foreign KEY (group_id) references groups (id) on update CASCADE on delete CASCADE,
-  constraint group_members_invited_by_fkey foreign KEY (invited_by) references auth.users (id),
-  constraint group_members_user_id_fkey foreign KEY (user_id) references auth.users (id)
-) TABLESPACE pg_default;
-
-create table public.group_products (
-  id uuid not null default gen_random_uuid (),
-  group_id uuid null,
-  product_id uuid null,
-  status public.group_product_status null,
-  constraint group_products_pkey primary key (id),
-  constraint group_products_group_id_fkey foreign KEY (group_id) references groups (id) on update RESTRICT on delete CASCADE,
-  constraint group_products_product_id_fkey foreign KEY (product_id) references products (id) on update RESTRICT on delete CASCADE
-) TABLESPACE pg_default;
-
-create table public.categories (
-  id uuid not null default gen_random_uuid (),
-  description text not null,
-  image_url text not null,
-  constraint PK_category primary key (id),
-  constraint category_Description_key unique (description)
-) TABLESPACE pg_default;
-
-create table public.addresses (
-  id uuid not null default gen_random_uuid (),
-  cep text not null,
-  state character(2) not null,
-  city character varying(100) not null,
-  neighborhood character varying(100) not null,
-  street character varying(100) not null,
-  number smallint not null,
-  complement character varying(100) not null,
-  user_id uuid null default auth.uid (),
-  constraint PK_adresses primary key (id),
-  constraint adresses_user_id_fkey foreign KEY (user_id) references auth.users (id) on update RESTRICT on delete CASCADE
-) TABLESPACE pg_default;
-
-# ENUMERATED TYPES:
-
-create type public.dia_da_semana as enum (
-  'domingo',
-  'segunda',
-  'terça-feira', 
-  'quarta-feira',
-  'quinta-feira',
-  'sexta-feira',
-  'sábado'
-);
-
-create type public.group_member_role as enum (
-  'admin',
-  'membro'
-);
-
-create type public.group_member_status as enum (
-  'pendente',
-  'ativo'
-);
-
-create type public.rent_status as enum (
-  'pendente',
-  'confirmado',
-  'em andamento',
-  'cancelado',
-  'concluído'
-);
-
-create type public.group_product_status as enum (
-  'pendente',
-  'confirmado',
-  'negado'
-);
-
-create type public.user_subscription as enum (
-  'free',
-  'pro'
-);
+[
+  {
+    "schema": "public",
+    "enum_type": "dia_da_semana",
+    "values": "{domingo,segunda,terça-feira,quarta-feira,quinta-feira,sexta-feira,sábado}"
+  },
+  {
+    "schema": "public",
+    "enum_type": "group_member_role",
+    "values": "{admin,membro}"
+  },
+  {
+    "schema": "public",
+    "enum_type": "group_member_status",
+    "values": "{pendente,ativo}"
+  },
+  {
+    "schema": "public",
+    "enum_type": "group_product_status",
+    "values": "{pendente,confirmado,negado}"
+  },
+  {
+    "schema": "public",
+    "enum_type": "media_kind",
+    "values": "{foto,video}"
+  },
+  {
+    "schema": "public",
+    "enum_type": "rent_actor",
+    "values": "{locador,locatario}"
+  },
+  {
+    "schema": "public",
+    "enum_type": "rent_media_phase",
+    "values": "{inicio,devolucao}"
+  },
+  {
+    "schema": "public",
+    "enum_type": "rent_status",
+    "values": "{pendente,confirmado,\"em andamento\",cancelado,concluído}"
+  },
+  {
+    "schema": "public",
+    "enum_type": "user_subscription",
+    "values": "{free,pro}"
+  }
+]
 
 # USE ZUSTAND WHEN USING GLOBAL STATE.

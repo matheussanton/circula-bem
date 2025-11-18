@@ -284,7 +284,13 @@ const RentManagementScreen = () => {
         <View style={styles.actionButtons}>
           <TouchableOpacity 
             style={[styles.actionButton, styles.startButton]}
-            onPress={() => confirmStatusChange(item.id, 'em andamento', 'Iniciar', item.productName)}
+            onPress={() => navigation.navigate('RentMediaCapture', {
+              rentId: item.id,
+              productId: item.productId,
+              phase: 'inicio',
+              actor: 'locador',
+              productName: item.productName,
+            })}
           >
             <MaterialCommunityIcons name="play" size={20} color="#FFFFFF" />
             <Text style={styles.actionButtonText}>Iniciar Aluguel</Text>
@@ -296,7 +302,13 @@ const RentManagementScreen = () => {
         <View style={styles.actionButtons}>
           <TouchableOpacity 
             style={[styles.actionButton, styles.completeButton]}
-            onPress={() => confirmStatusChange(item.id, 'concluído', 'Finalizar', item.productName)}
+            onPress={() => navigation.navigate('RentMediaCapture', {
+              rentId: item.id,
+              productId: item.productId,
+              phase: 'devolucao',
+              actor: 'locador',
+              productName: item.productName,
+            })}
           >
             <MaterialCommunityIcons name="check-circle" size={20} color="#FFFFFF" />
             <Text style={styles.actionButtonText}>Finalizar Aluguel</Text>

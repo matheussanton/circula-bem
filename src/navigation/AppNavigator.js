@@ -27,6 +27,7 @@ import AccountScreen from '../screens/AccountScreen';
 import MainLayout from '../components/MainLayout';
 import ProductMapScreen from '../screens/ProductMapScreen';
 import MapPickerFullScreen from '../screens/MapPickerFullScreen';
+import RentMediaCaptureScreen from '../screens/RentMediaCaptureScreen';
 
 const Stack = createStackNavigator();
 
@@ -77,6 +78,7 @@ const AppNavigator = () => {
         )}
       </Stack.Screen>
       <Stack.Screen name="RentDetail" component={RentDetailScreen} options={{ title: 'Detalhes do Aluguel' }} />
+      <Stack.Screen name="RentMediaCapture" component={RentMediaCaptureScreen} options={{ title: 'Registro do Aluguel' }} />
       <Stack.Screen name="MyProducts" options={{ title: 'Meus Produtos' }}>
         {() => (
           <ScreenWrapper>

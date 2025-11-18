@@ -99,38 +99,68 @@ const MyRentsScreen = () => {
     { key: 'cancelado', label: 'Cancelados' },
   ];
 
-  const renderRentItem = ({ item }) => (
+  const wantsCapturePhase = (dbStatus) => {
+    if (dbStatus === 'confirmado' || dbStatus === 'aguardando_checkin_locatario') return 'inicio';
+    if (dbStatus === 'em andamento' || dbStatus === 'aguardando_checkout_locatario') return 'devolucao';
+    return null;
+  };
+
+  const renderRentItem = ({ item }) => {
+    const phaseToCapture = wantsCapturePhase(item.dbStatus);
+
+    return (
     <TouchableOpacity 
       style={styles.rentCard}
       onPress={() => handleRentPress(item)}
     >
-      <Image source={{ uri: item.image }} style={styles.productImage} />
-      <View style={styles.rentInfo}>
-        <Text style={styles.productName}>{item.productName}</Text>
-        <Text style={styles.ownerName}>Proprietário: {item.ownerName}</Text>
-        <Text style={styles.dateRange}>
-          {item.startDate}{item.endDate && item.endDate !== item.startDate ? ` até ${item.endDate}` : ''}
-        </Text>
-        <Text style={styles.daysCount}>
-          {item.totalDays} {item.totalDays === 1 ? 'dia' : 'dias'}
-        </Text>
-        <View style={styles.priceContainer}>
-          <Text style={styles.unitPrice}>{item.price}</Text>
-          <Text style={styles.totalPrice}>Total: {item.totalAmount}</Text>
+      <View style={styles.rentRow}>
+        <Image source={{ uri: item.image }} style={styles.productImage} />
+        <View style={styles.rentInfo}>
+          <Text style={styles.productName}>{item.productName}</Text>
+          <Text style={styles.ownerName}>Proprietário: {item.ownerName}</Text>
+          <Text style={styles.dateRange}>
+            {item.startDate}{item.endDate && item.endDate !== item.startDate ? ` até ${item.endDate}` : ''}
+          </Text>
+          <Text style={styles.daysCount}>
+            {item.totalDays} {item.totalDays === 1 ? 'dia' : 'dias'}
+          </Text>
+          <View style={styles.priceContainer}>
+            <Text style={styles.unitPrice}>{item.price}</Text>
+            <Text style={styles.totalPrice}>Total: {item.totalAmount}</Text>
+          </View>
+        </View>
+        <View style={styles.statusContainer}>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+            <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
+          </View>
+          <MaterialCommunityIcons 
+            name="chevron-right" 
+            size={24} 
+            color="#9CA3AF" 
+          />
         </View>
       </View>
-      <View style={styles.statusContainer}>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
+
+      {phaseToCapture && (
+        <View style={styles.ctaContainer}>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            onPress={() => navigation.navigate('RentMediaCapture', {
+              rentId: item.id,
+              productId: item.productId,
+              phase: phaseToCapture,
+              actor: 'locatario',
+              productName: item.productName,
+            })}
+          >
+            <Text style={styles.ctaText}>
+              {phaseToCapture === 'inicio' ? 'Registrar Início' : 'Registrar Devolução'}
+            </Text>
+          </TouchableOpacity>
         </View>
-        <MaterialCommunityIcons 
-          name="chevron-right" 
-          size={24} 
-          color="#9CA3AF" 
-        />
-      </View>
+      )}
     </TouchableOpacity>
-  );
+  )};
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -395,8 +425,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -405,6 +434,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  rentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   productImage: {
     width: 60,
@@ -465,6 +498,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#FFFFFF',
+  },
+  ctaContainer: {
+    marginTop: 12,
+    width: '100%',
+  },
+  ctaButton: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  ctaText: {
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontWeight: '700',
   },
   emptyState: {
     alignItems: 'center',
