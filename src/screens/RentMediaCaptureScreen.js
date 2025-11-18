@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Image, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Image, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import ViewShot from 'react-native-view-shot';
@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { uploadRentMedia, completePhaseAndUpdateStatus } from '../services/rentMediaService';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const RentMediaCaptureScreen = () => {
   const navigation = useNavigation();
@@ -20,13 +21,28 @@ const RentMediaCaptureScreen = () => {
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
   const [items, setItems] = useState([]); // { id, uri, kind, width, height, durationMs, meta }
   const [isRecording, setIsRecording] = useState(false);
+  const [captureMode, setCaptureMode] = useState('photo'); // 'photo' | 'video'
   const shotRefs = useRef({}); // id -> ref
   const [currentUserId, setCurrentUserId] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const registerShotRef = (id, ref) => {
     if (ref) {
       shotRefs.current[id] = ref;
     }
+  };
+
+  const onPressShutter = async () => {
+    if (captureMode === 'photo') {
+      await takePhoto();
+    } else {
+      await startStopVideo();
+    }
+  };
+
+  const toggleMode = () => {
+    if (isRecording) return;
+    setCaptureMode((m) => (m === 'photo' ? 'video' : 'photo'));
   };
 
   useEffect(() => {
@@ -140,6 +156,7 @@ const RentMediaCaptureScreen = () => {
         Alert.alert('Regra', 'Capture 3 fotos ou 1 vídeo antes de continuar.');
         return;
       }
+      setUploading(true);
       let seq = 1;
       for (const it of items) {
         let fileToSend = it.uri;
@@ -173,6 +190,8 @@ const RentMediaCaptureScreen = () => {
       navigation.goBack();
     } catch (e) {
       Alert.alert('Erro', e.message || 'Falha ao enviar as mídias.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -186,10 +205,12 @@ const RentMediaCaptureScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{phase === 'inicio' ? 'Registro de Início' : 'Registro de Devolução'}</Text>
-        {productName ? <Text style={styles.subtitle}>{productName}</Text> : null}
-      </View>
+      <SafeAreaView style={styles.headerSafe}>
+        <View style={styles.headerInner}>
+          <Text style={styles.title}>{phase === 'inicio' ? 'Registro de Início' : 'Registro de Devolução'}</Text>
+          {productName ? <Text style={styles.subtitle}>{productName}</Text> : null}
+        </View>
+      </SafeAreaView>
 
       <CameraView ref={cameraRef} style={styles.camera} facing="back" />
 
@@ -203,17 +224,30 @@ const RentMediaCaptureScreen = () => {
         </View>
       </View>
 
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.btn} onPress={takePhoto}>
-          <Text style={styles.btnText}>Foto</Text>
+      {/* Controles de captura: toggle de modo, obturador central e enviar flutuante */}
+      <View style={styles.controls}>
+        <TouchableOpacity style={[styles.modeToggle, (isRecording || uploading) && { opacity: 0.6 }]} onPress={toggleMode} disabled={isRecording || uploading}>
+          <MaterialCommunityIcons
+            name={captureMode === 'photo' ? 'camera' : (isRecording ? 'record-circle' : 'video')}
+            size={20}
+            color="#fff"
+          />
+          <Text style={styles.modeToggleText}>{captureMode === 'photo' ? 'Foto' : (isRecording ? 'Gravando' : 'Vídeo')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.btn, isRecording ? styles.btnRec : styles.btnVideo]} onPress={startStopVideo}>
-          <Text style={styles.btnText}>{isRecording ? 'Parar' : 'Vídeo'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={uploadAll}>
-          <Text style={styles.btnText}>Enviar</Text>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onPressShutter}
+          disabled={uploading}
+          style={[styles.shutterOuter, captureMode === 'video' && isRecording && styles.shutterOuterRec, uploading && { opacity: 0.6 }]}
+        >
+          <View style={[styles.shutterInner, captureMode === 'video' && isRecording && styles.shutterInnerRec]} />
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity style={[styles.sendFab, uploading && { opacity: 0.6 }]} onPress={uploadAll} activeOpacity={0.85} disabled={uploading}>
+        <MaterialCommunityIcons name="send" size={22} color="#fff" />
+      </TouchableOpacity>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.previewStrip}>
         {items.map((it, idx) => (
@@ -268,28 +302,38 @@ const RentMediaCaptureScreen = () => {
           );
         })}
       </View>
+
+      {uploading && (
+        <View style={styles.uploadOverlay}>
+          <ActivityIndicator size="large" color="#ffffff" />
+          <Text style={styles.uploadText}>Enviando mídias...</Text>
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  header: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#111827' },
+  headerSafe: { backgroundColor: '#111827' },
+  headerInner: { paddingHorizontal: 16, paddingVertical: 16 },
   title: { color: '#fff', fontSize: 16, fontWeight: '700' },
   subtitle: { color: '#9CA3AF', fontSize: 12, marginTop: 2 },
   camera: { flex: 1 },
-  overlayInfo: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, pointerEvents: 'none' },
+  overlayInfo: { position: 'absolute', left: 0, right: 0, top: 128, bottom: 0, pointerEvents: 'none' },
   topLeft: { position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   bottomLeft: { position: 'absolute', bottom: 100, left: 8, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 6, paddingVertical: 4, borderRadius: 4 },
   overlayTextSmall: { color: '#fff', fontSize: 10, fontWeight: '600' },
   overlayText: { color: '#fff', fontSize: 12 },
-  actions: { position: 'absolute', bottom: 20, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-around' },
-  btn: { backgroundColor: '#111827', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8 },
-  btnVideo: { backgroundColor: '#1F2937' },
-  btnRec: { backgroundColor: '#DC2626' },
-  btnPrimary: { backgroundColor: '#2563EB' },
-  btnText: { color: '#fff', fontWeight: '700' },
-  previewStrip: { position: 'absolute', bottom: 72, left: 0, right: 0, paddingHorizontal: 8 },
+  controls: { position: 'absolute', bottom: 24, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+  modeToggle: { position: 'absolute', left: 24, bottom: 16, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  modeToggleText: { color: '#fff', fontWeight: '700' },
+  shutterOuter: { width: 78, height: 78, borderRadius: 78, borderWidth: 4, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
+  shutterInner: { width: 62, height: 62, borderRadius: 62, backgroundColor: '#fff' },
+  shutterOuterRec: { borderColor: '#DC2626' },
+  shutterInnerRec: { backgroundColor: '#DC2626', borderRadius: 12 },
+  sendFab: { position: 'absolute', right: 24, bottom: 28, width: 54, height: 54, borderRadius: 54, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center', elevation: 3 },
+  previewStrip: { position: 'absolute', bottom: 160, left: 0, right: 0, paddingHorizontal: 8 },
   previewItem: { marginRight: 8 },
   previewImage: { width: 140, height: 100, borderRadius: 8 },
   videoPlaceholder: { backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center' },
@@ -300,6 +344,8 @@ const styles = StyleSheet.create({
   previewText: { color: '#fff', fontSize: 10 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   info: { color: '#111827' },
+  uploadOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
+  uploadText: { color: '#fff', marginTop: 12, fontSize: 16, fontWeight: '600' },
 });
 
 export default RentMediaCaptureScreen;

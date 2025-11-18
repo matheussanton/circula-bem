@@ -47,8 +47,16 @@ const MyRentsScreen = () => {
   };
 
   const handleRentPress = (rent) => {
-    // Só permitir navegação para detalhes se o status permitir
-    const allowedStatuses = ['confirmado', 'em andamento', 'concluído'];
+    // Permitir navegação para detalhes quando já há vínculo ativo ou em checagens
+    const allowedStatuses = [
+      'confirmado',
+      'aguardando_checkin_locador',
+      'aguardando_checkin_locatario',
+      'em andamento',
+      'aguardando_checkout_locatario',
+      'aguardando_checkout_locador',
+      'concluído'
+    ];
     
     if (allowedStatuses.includes(rent.dbStatus)) {
       navigation.navigate('RentDetail', { rentId: rent.id });

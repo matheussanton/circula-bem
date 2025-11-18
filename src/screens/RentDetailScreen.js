@@ -72,8 +72,14 @@ const RentDetailScreen = ({ route, navigation }) => {
     switch (status) {
       case 'confirmado':
         return '#10B981';
+      case 'aguardando_checkin_locador':
+      case 'aguardando_checkin_locatario':
+        return '#F59E0B';
       case 'em andamento':
         return '#3B82F6';
+      case 'aguardando_checkout_locatario':
+      case 'aguardando_checkout_locador':
+        return '#7C3AED';
       case 'concluído':
         return '#6B7280';
       case 'pendente':
@@ -89,8 +95,16 @@ const RentDetailScreen = ({ route, navigation }) => {
     switch (status) {
       case 'confirmado':
         return 'Confirmado';
+      case 'aguardando_checkin_locador':
+        return 'Aguard. Check-in (Locador)';
+      case 'aguardando_checkin_locatario':
+        return 'Aguard. Check-in (Locatário)';
       case 'em andamento':
         return 'Em Andamento';
+      case 'aguardando_checkout_locatario':
+        return 'Aguard. Devolução (Locatário)';
+      case 'aguardando_checkout_locador':
+        return 'Aguard. Devolução (Locador)';
       case 'concluído':
         return 'Concluído';
       case 'pendente':

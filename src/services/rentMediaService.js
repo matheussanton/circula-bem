@@ -138,10 +138,14 @@ export async function completePhaseAndUpdateStatus({ rentId, phase, actor }) {
         started_by: userId,
       });
     } else {
-      // Aguardando o outro lado; manter 'confirmado' por compatibilidade
-      await updateTableById('rents', rentId, {
-        status: 'confirmado',
-      });
+      // Aguardando o outro lado com granularidade
+      if (locadorDone && !locatarioDone) {
+        await updateTableById('rents', rentId, { status: 'aguardando_checkin_locatario' });
+      } else if (!locadorDone && locatarioDone) {
+        await updateTableById('rents', rentId, { status: 'aguardando_checkin_locador' });
+      } else {
+        await updateTableById('rents', rentId, { status: 'confirmado' });
+      }
     }
   } else {
     // fase devolução
@@ -153,10 +157,14 @@ export async function completePhaseAndUpdateStatus({ rentId, phase, actor }) {
         ended_by: userId,
       });
     } else {
-      // Aguardando o outro lado; manter 'em andamento' por compatibilidade
-      await updateTableById('rents', rentId, {
-        status: 'em andamento',
-      });
+      // Aguardando o outro lado com granularidade
+      if (locatarioDone && !locadorDone) {
+        await updateTableById('rents', rentId, { status: 'aguardando_checkout_locador' });
+      } else if (locadorDone && !locatarioDone) {
+        await updateTableById('rents', rentId, { status: 'aguardando_checkout_locatario' });
+      } else {
+        await updateTableById('rents', rentId, { status: 'em andamento' });
+      }
     }
   }
 }

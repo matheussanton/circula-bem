@@ -209,8 +209,16 @@ const RentManagementScreen = () => {
         return '#F59E0B';
       case 'confirmado':
         return '#10B981';
+      case 'aguardando_checkin_locador':
+        return '#F59E0B';
+      case 'aguardando_checkin_locatario':
+        return '#F59E0B';
       case 'em andamento':
         return '#3B82F6';
+      case 'aguardando_checkout_locatario':
+        return '#7C3AED';
+      case 'aguardando_checkout_locador':
+        return '#7C3AED';
       case 'concluído':
         return '#6B7280';
       case 'cancelado':
@@ -226,8 +234,16 @@ const RentManagementScreen = () => {
         return 'Pendente';
       case 'confirmado':
         return 'Confirmado';
+      case 'aguardando_checkin_locador':
+        return 'Aguard. Check-in (Locador)';
+      case 'aguardando_checkin_locatario':
+        return 'Aguard. Check-in (Locatário)';
       case 'em andamento':
         return 'Em Andamento';
+      case 'aguardando_checkout_locatario':
+        return 'Aguard. Devolução (Locatário)';
+      case 'aguardando_checkout_locador':
+        return 'Aguard. Devolução (Locador)';
       case 'concluído':
         return 'Concluído';
       case 'cancelado':
@@ -280,7 +296,7 @@ const RentManagementScreen = () => {
         </View>
       )}
 
-      {item.status === 'confirmado' && (
+      {(item.status === 'confirmado' || item.status === 'aguardando_checkin_locador') && (
         <View style={styles.actionButtons}>
           <TouchableOpacity 
             style={[styles.actionButton, styles.startButton]}
@@ -298,7 +314,7 @@ const RentManagementScreen = () => {
         </View>
       )}
 
-      {item.status === 'em andamento' && (
+      {(item.status === 'em andamento' || item.status === 'aguardando_checkout_locador') && (
         <View style={styles.actionButtons}>
           <TouchableOpacity 
             style={[styles.actionButton, styles.completeButton]}

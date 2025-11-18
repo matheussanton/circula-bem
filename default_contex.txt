@@ -90,7 +90,7 @@
   {
     "schema": "public",
     "enum_type": "rent_status",
-    "values": "{pendente,confirmado,\"em andamento\",cancelado,concluído}"
+    "values": "{pendente,confirmado,aguardando_checkin_locador,aguardando_checkin_locatario,\"em andamento\",aguardando_checkout_locatario,aguardando_checkout_locador,cancelado,concluído}"
   },
   {
     "schema": "public",

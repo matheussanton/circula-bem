@@ -138,8 +138,12 @@ const mapRentStatus = (dbStatus) => {
     case 'pendente':
       return 'pendente';
     case 'confirmado':
-      return 'ativo';
+    case 'aguardando_checkin_locador':
+    case 'aguardando_checkin_locatario':
+      return 'pendente'; // ainda não iniciou de fato
     case 'em andamento':
+    case 'aguardando_checkout_locatario':
+    case 'aguardando_checkout_locador':
       return 'ativo';
     case 'concluído':
       return 'finalizado';
