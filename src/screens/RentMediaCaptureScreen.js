@@ -7,6 +7,7 @@ import { Dimensions } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { uploadRentMedia, completePhaseAndUpdateStatus } from '../services/rentMediaService';
+import { fetchRentByIdRaw, fetchProductOwnerId } from '../services/reviewService';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -187,7 +188,25 @@ const RentMediaCaptureScreen = () => {
       await completePhaseAndUpdateStatus({ rentId, phase, actor });
       const started = phase === 'inicio';
       Alert.alert('Sucesso', started ? 'Registro de início enviado!' : 'Registro de devolução enviado!');
-      navigation.goBack();
+      if (!started) {
+        // Se o locador alugou o próprio produto (mesmo usuário como locador e locatário), pular avaliação
+        try {
+          const rent = await fetchRentByIdRaw(rentId);
+          const ownerId = await fetchProductOwnerId(productId);
+          const selfRental = rent && ownerId && rent.user_id === ownerId;
+          if (selfRental) {
+            Alert.alert('Aviso', 'Avaliação pulada: aluguel do próprio produto.');
+            navigation.navigate('MyRents');
+          } else {
+            navigation.navigate('ReviewFlow', { rentId, productId, actor, phase, productName });
+          }
+        } catch {
+          // Em caso de falha na verificação, seguir fluxo normal
+          navigation.navigate('ReviewFlow', { rentId, productId, actor, phase, productName });
+        }
+      } else {
+        navigation.goBack();
+      }
     } catch (e) {
       Alert.alert('Erro', e.message || 'Falha ao enviar as mídias.');
     } finally {

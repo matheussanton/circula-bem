@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, ScrollView, SafeAreaView } from 'react-native';
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchProductById } from '../services/productService';
+import { getProductReviewTotals } from '../services/reviewService';
 import { fetchUserById } from '../services/api';
 import { fetchCategories } from '../services/categoryService';
 import { registerCallback } from '../services/callbackRegistry';
@@ -23,6 +24,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [tempQ, setTempQ] = useState('');
   const [tempCenter, setTempCenter] = useState(null);
   const [tempRadius, setTempRadius] = useState(25);
+  const [productTotals, setProductTotals] = useState(null);
 
   useEffect(() => {
     const loadProductDetails = async () => {
@@ -34,6 +36,12 @@ const ProductDetailScreen = ({ route, navigation }) => {
           const renterDetails = await fetchUserById(productDetails.user_id);
           setRenter(renterDetails);
         }
+
+        // Totais de avaliações do produto
+        try {
+          const totals = await getProductReviewTotals(productId);
+          setProductTotals(totals);
+        } catch {}
       } catch (error) {
         console.error('Erro ao carregar detalhes do produto ou usuário:', error);
       } finally {
@@ -215,8 +223,12 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
           <View style={styles.ratingContainer}>
             <FontAwesome name="star" size={14} color="#FFD700" />
-            <Text style={styles.ratingText}>4.7</Text>
-            <Text style={styles.reviewCount}>(64 avaliações)</Text>
+            <Text style={styles.ratingText}>
+              {productTotals ? Number(productTotals.average_rating || 0).toFixed(1) : '0.0'}
+            </Text>
+            <Text style={styles.reviewCount}>
+              ({productTotals?.total_reviews || 0} avaliações)
+            </Text>
           </View>
 
           {/* Buscar similares */}
@@ -269,7 +281,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
             </View>
 
             <TouchableOpacity
-              style={{ marginTop: 10, backgroundColor: '#4F8CFF', borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}
+              style={{ marginTop: 10, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#4F8CFF', borderRadius: 12, paddingVertical: 12, alignItems: 'center', textColor: '#4F8CFF' }}
               onPress={() =>
                 navigation.navigate('SearchResults', {
                   q: tempQ || '',
@@ -279,7 +291,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
                 })
               }
             >
-              <Text style={{ color: '#fff', fontWeight: '800' }}>Buscar</Text>
+              <Text style={{ color: '#4F8CFF', fontWeight: '500' }}>Buscar</Text>
             </TouchableOpacity>
           </View>
 

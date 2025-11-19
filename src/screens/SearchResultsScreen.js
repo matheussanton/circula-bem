@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, StyleSheet, SafeAreaView, TextInput, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -33,6 +33,34 @@ const SearchResultsScreen = () => {
   const [query, setQuery] = useState(q);
   const [mapMode, setMapMode] = useState(false);
   const mapRef = useRef(null);
+
+  // Helpers para calcular distância (fallback local caso o serviço não compute)
+  const deg2rad = (deg) => (deg * Math.PI) / 180;
+  const haversineKm = (lat1, lon1, lat2, lon2) => {
+    if (
+      typeof lat1 !== 'number' || typeof lon1 !== 'number' ||
+      typeof lat2 !== 'number' || typeof lon2 !== 'number'
+    ) return null;
+    const R = 6371;
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Garante distanceKm nos itens (caso a primeira busca tenha ocorrido sem center)
+  const itemsWithDistance = useMemo(() => {
+    if (!activeCenter) return items;
+    return items.map(p => {
+      if (typeof p?.distanceKm === 'number') return p;
+      const d = haversineKm(activeCenter.lat, activeCenter.lng, p.lat, p.lng);
+      return d != null ? { ...p, distanceKm: d } : p;
+    });
+  }, [items, activeCenter]);
 
   // Try to fallback to current location when no center is provided
   useEffect(() => {
@@ -361,7 +389,8 @@ const SearchResultsScreen = () => {
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={itemsWithDistance}
+          numColumns={2}
           keyExtractor={i => String(i.id)}
           renderItem={renderItem}
           onEndReached={() => hasMore && !loadingMore && load(false)}

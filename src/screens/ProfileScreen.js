@@ -6,11 +6,13 @@ import { fetchUserById } from '../services/api';
 import ProfileImage from '../components/ProfileImage';
 import { maskCPF } from '../utils/cpfUtils';
 import { formatPhone } from '../utils/phoneUtils';
+import { getUserReviewTotalsByRole } from '../services/reviewService';
 
 const ProfileScreen = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true); // adiciona controle de carregamento
   const [error, setError] = useState(null);
+  const [totals, setTotals] = useState({ locador: null, locatario: null });
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -25,6 +27,14 @@ const ProfileScreen = () => {
 
         if (user) {
           setUserData(user);
+          // Carregar totais de avaliações por papel
+          try {
+            const [asLocador, asLocatario] = await Promise.all([
+              getUserReviewTotalsByRole(userId, 'locador'),
+              getUserReviewTotalsByRole(userId, 'locatario'),
+            ]);
+            setTotals({ locador: asLocador, locatario: asLocatario });
+          } catch {}
         } else {
           setError('Dados do usuário não encontrados');
         }
@@ -101,6 +111,37 @@ const ProfileScreen = () => {
         <TouchableOpacity style={styles.editButton}>
           <Text style={styles.editButtonText}>Editar Perfil</Text>
         </TouchableOpacity>
+
+        {/* Avaliações recebidas */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Avaliações</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={[styles.ratingCard, { flex: 1 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <Icon name="star" size={16} color="#FFD700" />
+                <Text style={styles.ratingCardValue}>
+                  {totals.locador ? Number(totals.locador.average_rating || 0).toFixed(1) : '0.0'}
+                </Text>
+              </View>
+              <Text style={styles.ratingCardLabel}>Como Locador</Text>
+              <Text style={styles.ratingCardSub}>
+                {totals.locador?.total_reviews || 0} avaliações
+              </Text>
+            </View>
+            <View style={[styles.ratingCard, { flex: 1 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <Icon name="star" size={16} color="#FFD700" />
+                <Text style={styles.ratingCardValue}>
+                  {totals.locatario ? Number(totals.locatario.average_rating || 0).toFixed(1) : '0.0'}
+                </Text>
+              </View>
+              <Text style={styles.ratingCardLabel}>Como Locatário</Text>
+              <Text style={styles.ratingCardSub}>
+                {totals.locatario?.total_reviews || 0} avaliações
+              </Text>
+            </View>
+          </View>
+        </View>
       </ScrollView>
 
     </SafeAreaView>
@@ -220,5 +261,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  ratingCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  ratingCardValue: {
+    marginLeft: 6,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#222',
+  },
+  ratingCardLabel: {
+    fontSize: 14,
+    color: '#334155',
+    fontWeight: '600',
+  },
+  ratingCardSub: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
   },
 });
