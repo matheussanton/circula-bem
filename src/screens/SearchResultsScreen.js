@@ -12,6 +12,7 @@ import { saveSearch, getRecentSearches } from '../services/searchService.js';
 import { registerCallback } from '../services/callbackRegistry';
 import { v4 as uuidv4 } from 'uuid';
 import MapView, { Marker, Circle, PROVIDER_GOOGLE, Callout } from 'react-native-maps';
+import CategorySelect from '../components/CategorySelect';
 
 const PAGE_SIZE = 20;
 
@@ -359,25 +360,14 @@ const SearchResultsScreen = () => {
             </TouchableOpacity>
           ))}
         </View>
-        {categories?.length > 0 && (
-          <FlatList
-            data={categories}
-            keyExtractor={(c) => String(c.id)}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            renderItem={({ item: c }) => (
-              <TouchableOpacity
-                style={[styles.filterChip, activeCategory === c.id && styles.filterChipActive]}
-                onPress={() => setActiveCategory(prev => (prev === c.id ? null : c.id))}
-              >
-                <Text style={[styles.filterChipText, activeCategory === c.id && styles.filterChipTextActive]}>
-                  {c.description}
-                </Text>
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8 }}
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <CategorySelect
+            value={activeCategory}
+            onChange={setActiveCategory}
+            categories={categories}
+            placeholder="Categoria"
           />
-        )}
+        </View>
       </View>
 
       {mapMode ? (

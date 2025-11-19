@@ -18,6 +18,7 @@ import { updateProduct, deleteProduct, uploadMultipleProductImages, fetchProduct
 import { fetchCategories } from '../services/categoryService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapPicker from '../components/MapPicker';
+import CategorySelect from '../components/CategorySelect';
 
 const EditProduct = ({ route, navigation }) => {
   const { product } = route.params;
@@ -383,25 +384,12 @@ const EditProduct = ({ route, navigation }) => {
             {/* Categoria */}
             <View style={styles.formSection}>
               <Text style={styles.sectionTitle}>Categoria</Text>
-              <View style={styles.categoryContainer}>
-                {categories.map((category) => (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.categoryButton,
-                      categoryId === category.id && styles.categoryButtonSelected
-                    ]}
-                    onPress={() => setCategoryId(category.id)}
-                  >
-                    <Text style={[
-                      styles.categoryButtonText,
-                      categoryId === category.id && styles.categoryButtonTextSelected
-                    ]}>
-                      {category.description}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <CategorySelect
+                value={categoryId}
+                onChange={setCategoryId}
+                categories={categories}
+                placeholder="Selecione a categoria"
+              />
             </View>
 
             {/* Disponibilidade */}

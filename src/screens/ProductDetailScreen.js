@@ -8,6 +8,7 @@ import { fetchCategories } from '../services/categoryService';
 import { registerCallback } from '../services/callbackRegistry';
 import { v4 as uuidv4 } from 'uuid';
 import ProfileImage from '../components/ProfileImage';
+import CategorySelect from '../components/CategorySelect';
 import { formatPrice } from '../utils/priceUtils';
 import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Platform, TextInput, ScrollView as RNScroll } from 'react-native';
@@ -250,17 +251,14 @@ const ProductDetailScreen = ({ route, navigation }) => {
               <Text style={{ color: '#334155' }}>{tempCenter ? 'Endereço selecionado' : 'Escolher endereço'}</Text>
             </TouchableOpacity>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-              {categories.map(c => (
-                <TouchableOpacity
-                  key={c.id}
-                  style={{ backgroundColor: activeCat === c.id ? '#4F8CFF' : '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, marginRight: 8 }}
-                  onPress={() => setActiveCat(prev => (prev === c.id ? null : c.id))}
-                >
-                  <Text style={{ color: activeCat === c.id ? '#fff' : '#1F2937', fontWeight: '600' }}>{c.description}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <View style={{ marginBottom: 8 }}>
+              <CategorySelect
+                value={activeCat}
+                onChange={setActiveCat}
+                categories={categories}
+                placeholder="Categoria"
+              />
+            </View>
 
             <View style={{ backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
               <MaterialCommunityIcons name="magnify" size={20} color="#64748B" style={{ marginRight: 8 }} />
