@@ -286,8 +286,12 @@ const GroupDetailScreen = () => {
     );
   };
 
+  const handleProductPress = (product) => {
+    navigation.navigate('ProductDetail', { productId: product.id });
+  };
+
   const renderProductItem = ({ item }) => (
-    <TouchableOpacity style={styles.productCard}>
+    <TouchableOpacity style={styles.productCard} onPress={() => handleProductPress(item)}>
       <Image 
         source={getProductImage(item.mainImage)} 
         style={styles.productImage}
@@ -297,7 +301,7 @@ const GroupDetailScreen = () => {
         <Text style={styles.productDescription} numberOfLines={2}>
           {item.description}
         </Text>
-        <Text style={styles.productPrice}>{item.priceFormatted}/dia</Text>
+        <Text style={styles.productPrice}>{item.priceFormatted}</Text>
         <View style={styles.productMeta}>
           <Text style={styles.productOwner}>por {item.owner.name}</Text>
           {getProductStatusBadge(item.groupStatus)}

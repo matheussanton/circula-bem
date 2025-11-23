@@ -15,6 +15,8 @@ import { useNavigation } from '@react-navigation/native';
 import { getTable, updateTableById } from '../services/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatPrice, formatPriceFromCents } from '../utils/priceUtils';
+import UserProfileModal from '../components/UserProfileModal';
+import { getOrCreateDirectConversation } from '../services/chatService';
 
 const RentManagementScreen = () => {
   const navigation = useNavigation();
@@ -22,6 +24,8 @@ const RentManagementScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState('pendente');
+  const [profileVisible, setProfileVisible] = useState(false);
+  const [profileUserId, setProfileUserId] = useState(null);
 
   useEffect(() => {
     loadRents();
@@ -152,14 +156,36 @@ const RentManagementScreen = () => {
       
       // Recarregar a lista
       await loadRents();
-      
+
+      // Ao confirmar, cria (ou obtém) uma conversa direta entre locador e locatário
+      if (newStatus === 'confirmado' && existingRent?.renterId) {
+        try {
+          const conversationId = await getOrCreateDirectConversation(existingRent.renterId);
+          console.log('💬 Conversa criada/obtida com sucesso:', conversationId);
+          Alert.alert(
+            'Sucesso',
+            'Aluguel confirmado com sucesso!',
+            [
+              {
+                text: 'Abrir chat',
+                onPress: () => navigation.navigate('Chat', { conversationId }),
+              },
+              { text: 'OK' },
+            ]
+          );
+          return;
+        } catch (chatErr) {
+          console.error('❌ Erro ao criar/obter conversa:', chatErr);
+        }
+      }
+
       const statusMessages = {
         'confirmado': 'Aluguel confirmado com sucesso!',
         'cancelado': 'Aluguel cancelado.',
         'em andamento': 'Aluguel marcado como em andamento.',
         'concluído': 'Aluguel finalizado com sucesso!'
       };
-      
+
       Alert.alert('Sucesso', statusMessages[newStatus] || 'Status atualizado com sucesso!');
     } catch (error) {
       console.error('❌ Erro ao atualizar status:', error);
@@ -264,6 +290,16 @@ const RentManagementScreen = () => {
 
       <View style={styles.rentInfo}>
         <Text style={styles.renterName}>Locador: {item.renterName}</Text>
+        <TouchableOpacity
+          onPress={() => {
+            setProfileUserId(item.renterId);
+            setProfileVisible(true);
+          }}
+          style={styles.profileLinkRow}
+        >
+          <MaterialCommunityIcons name="account-circle-outline" size={18} color="#2563EB" />
+          <Text style={styles.profileLinkText}>Ver perfil</Text>
+        </TouchableOpacity>
         <Text style={styles.dateRange}>
           {item.startDate} até {item.endDate}
         </Text>
@@ -271,7 +307,7 @@ const RentManagementScreen = () => {
           {item.totalDays} {item.totalDays === 1 ? 'dia' : 'dias'}
         </Text>
         <View style={styles.priceContainer}>
-          <Text style={styles.unitPrice}>{item.priceFormatted}/dia</Text>
+          <Text style={styles.unitPrice}>{item.priceFormatted}</Text>
           <Text style={styles.totalPrice}>Total: {item.totalAmount}</Text>
         </View>
       </View>
@@ -425,6 +461,21 @@ const RentManagementScreen = () => {
           showsVerticalScrollIndicator={false}
         />
       )}
+      
+      <UserProfileModal
+        visible={profileVisible}
+        userId={profileUserId}
+        onClose={() => {
+          setProfileVisible(false);
+          setProfileUserId(null);
+        }}
+        onChatPress={() => {
+          Alert.alert('Chat', 'Em breve você poderá conversar com o usuário.');
+        }}
+        onViewProductsPress={() => {
+          Alert.alert('Ver produtos', 'Em breve você poderá ver os produtos deste usuário.');
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -571,6 +622,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#2563EB',
+  },
+  profileLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  profileLinkText: {
+    color: '#2563EB',
+    fontSize: 13,
+    fontWeight: '600',
   },
   actionButtons: {
     flexDirection: 'row',

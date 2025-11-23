@@ -6,10 +6,10 @@ import { useNavigation } from '@react-navigation/native';
 import { fetchCategories } from '../services/categoryService';
 import { fetchProducts } from '../services/productService';
 import { fetchUserById } from '../services/api';
-import ProfileImage from '../components/ProfileImage';
 import { formatPrice } from '../utils/priceUtils';
 import ProductCard from '../components/ProductCard';
 import * as Location from 'expo-location';
+import HeaderBar from '../components/HeaderBar';
 
 const INFO_CARDS = [
   { icon: 'clock-outline', label: 'Ativos', value: 5 },
@@ -146,25 +146,7 @@ const HomeScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Header fixo fora da FlatList */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Image source={require('../../assets/logo.png')} style={styles.headerLogo} resizeMode="contain" />
-            <ProfileImage
-              imageUrl={userData?.image_url}
-              size={40}
-              borderWidth={2}
-              borderColor="#fff"
-            />
-          </View>
-          <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.headerIcon}>
-              <MaterialCommunityIcons name="bell-outline" size={26} color="#222" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerIcon}>
-              <MaterialCommunityIcons name="cog-outline" size={26} color="#222" />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <HeaderBar userImageUrl={userData?.image_url} />
 
         {/* Search Bar fixo */}
         <TouchableOpacity style={styles.searchContainer} activeOpacity={0.9} onPress={goToSearchResults}>

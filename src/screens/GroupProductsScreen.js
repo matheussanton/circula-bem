@@ -203,7 +203,7 @@ const GroupProductsScreen = () => {
         <Text style={styles.productDescription} numberOfLines={2}>
           {item.description}
         </Text>
-        <Text style={styles.productPrice}>{item.priceFormatted}/dia</Text>
+        <Text style={styles.productPrice}>{item.priceFormatted}</Text>
         
         <View style={styles.productFooter}>
           <View style={styles.ownerInfo}>

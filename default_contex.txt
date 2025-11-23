@@ -12,6 +12,18 @@
     "table_ddl": "CREATE TABLE public.categories (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    description text NOT NULL,\n    image_url text NOT NULL,\n    PRIMARY KEY (id)\n);"
   },
   {
+    "table_name": "conversation_messages",
+    "table_ddl": "CREATE TABLE public.conversation_messages (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    conversation_id uuid NOT NULL,\n    sender_id uuid NOT NULL,\n    content text NOT NULL,\n    created_at timestamp with time zone NOT NULL DEFAULT now(),\n    edited_at timestamp with time zone,\n    is_deleted boolean NOT NULL DEFAULT false,\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "conversation_users",
+    "table_ddl": "CREATE TABLE public.conversation_users (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    conversation_id uuid NOT NULL,\n    user_id uuid NOT NULL,\n    role conversation_role NOT NULL DEFAULT 'member'::conversation_role,\n    joined_at timestamp with time zone NOT NULL DEFAULT now(),\n    last_read_at timestamp with time zone,\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "conversations",
+    "table_ddl": "CREATE TABLE public.conversations (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    is_group boolean NOT NULL DEFAULT false,\n    title text,\n    image_url text,\n    created_at timestamp with time zone NOT NULL DEFAULT now(),\n    last_message_id uuid,\n    last_message_text text,\n    last_message_at timestamp with time zone,\n    last_message_sender_id uuid,\n    PRIMARY KEY (id)\n);"
+  },
+  {
     "table_name": "group_members",
     "table_ddl": "CREATE TABLE public.group_members (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    created_at timestamp with time zone NOT NULL DEFAULT now(),\n    group_id uuid NOT NULL,\n    user_id uuid NOT NULL,\n    role group_member_role,\n    status group_member_status,\n    invited_by uuid NOT NULL,\n    joined_at timestamp without time zone NOT NULL DEFAULT now(),\n    PRIMARY KEY (id)\n);"
   },
@@ -26,6 +38,14 @@
   {
     "table_name": "product_images",
     "table_ddl": "CREATE TABLE public.product_images (\n    id uuid NOT NULL,\n    product_id uuid NOT NULL,\n    image_url character varying(300) NOT NULL,\n    PRIMARY KEY (id)\n);"
+  },
+  {
+    "table_name": "product_review_totals",
+    "table_ddl": "CREATE TABLE public.product_review_totals (\n    product_id uuid NOT NULL,\n    total_reviews integer NOT NULL DEFAULT 0,\n    average_rating numeric(3,2) NOT NULL DEFAULT 0,\n    star_1_count integer NOT NULL DEFAULT 0,\n    star_2_count integer NOT NULL DEFAULT 0,\n    star_3_count integer NOT NULL DEFAULT 0,\n    star_4_count integer NOT NULL DEFAULT 0,\n    star_5_count integer NOT NULL DEFAULT 0,\n    updated_at timestamp with time zone NOT NULL DEFAULT now(),\n    PRIMARY KEY (product_id)\n);"
+  },
+  {
+    "table_name": "product_reviews",
+    "table_ddl": "CREATE TABLE public.product_reviews (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    rent_id uuid NOT NULL,\n    product_id uuid NOT NULL,\n    reviewer_user_id uuid NOT NULL,\n    rating smallint NOT NULL,\n    comment text,\n    created_at timestamp with time zone NOT NULL DEFAULT now(),\n    PRIMARY KEY (id)\n);"
   },
   {
     "table_name": "products",
@@ -46,12 +66,25 @@
   {
     "table_name": "user_extra_information",
     "table_ddl": "CREATE TABLE public.user_extra_information (\n    registration_number character varying NOT NULL,\n    first_name character varying(50) NOT NULL,\n    last_name character varying(50) NOT NULL,\n    user_id uuid DEFAULT auth.uid(),\n    image_url character varying,\n    subscription user_subscription DEFAULT 'free'::user_subscription,\n    phone_number text,\n    PRIMARY KEY (registration_number)\n);"
+  },
+  {
+    "table_name": "user_review_totals",
+    "table_ddl": "CREATE TABLE public.user_review_totals (\n    user_id uuid NOT NULL,\n    role rent_actor NOT NULL,\n    total_reviews integer NOT NULL DEFAULT 0,\n    average_rating numeric(3,2) NOT NULL DEFAULT 0,\n    star_1_count integer NOT NULL DEFAULT 0,\n    star_2_count integer NOT NULL DEFAULT 0,\n    star_3_count integer NOT NULL DEFAULT 0,\n    star_4_count integer NOT NULL DEFAULT 0,\n    star_5_count integer NOT NULL DEFAULT 0,\n    updated_at timestamp with time zone NOT NULL DEFAULT now(),\n    PRIMARY KEY (user_id, role)\n);"
+  },
+  {
+    "table_name": "user_reviews",
+    "table_ddl": "CREATE TABLE public.user_reviews (\n    id uuid NOT NULL DEFAULT gen_random_uuid(),\n    rent_id uuid NOT NULL,\n    reviewer_user_id uuid NOT NULL,\n    reviewee_user_id uuid NOT NULL,\n    role rent_actor NOT NULL,\n    rating smallint NOT NULL,\n    comment text,\n    created_at timestamp with time zone NOT NULL DEFAULT now(),\n    PRIMARY KEY (id)\n);"
   }
 ]
 
 # ENUMERATED TYPES (as json):
 
 [
+  {
+    "schema": "public",
+    "enum_type": "conversation_role",
+    "values": "{owner,member}"
+  },
   {
     "schema": "public",
     "enum_type": "dia_da_semana",

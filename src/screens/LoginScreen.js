@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { authenticateUser } from '../services/api';
 import KeyboardDismissView from '../components/KeyboardDismissView';
+import { LOGO_URL } from '../utils/brand';
 
 const loginValidationSchema = Yup.object().shape({
   email: Yup.string().email('Email inválido').required('O email é obrigatório'),
@@ -40,7 +42,7 @@ const LoginScreen = () => {
           <View style={styles.container}>
             {/* Logo */}
             <View style={styles.logoContainer}>
-              <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+              <ExpoImage source={{ uri: LOGO_URL }} style={styles.logo} contentFit="contain" />
             </View>
             
             <Text style={styles.title}>Bem-vindo!</Text>

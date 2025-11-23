@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -21,6 +22,7 @@ import { v4 as uuidv4 } from 'uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapPicker from '../components/MapPicker';
 import CategorySelect from '../components/CategorySelect';
+import { LOGO_URL } from '../utils/brand';
 
 const CreateProduct = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -189,7 +191,7 @@ const CreateProduct = ({ navigation }) => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <MaterialCommunityIcons name="arrow-left" size={24} color="#222" />
             </TouchableOpacity>
-            <Image source={require('../../assets/logo.png')} style={styles.headerLogo} resizeMode="contain" />
+            <ExpoImage source={{ uri: LOGO_URL }} style={styles.headerLogo} contentFit="contain" />
           </View>
           <Text style={styles.title}>Criar Produto</Text>
           <View style={styles.headerRight} />

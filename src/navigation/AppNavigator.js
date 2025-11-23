@@ -29,6 +29,8 @@ import ProductMapScreen from '../screens/ProductMapScreen';
 import MapPickerFullScreen from '../screens/MapPickerFullScreen';
 import RentMediaCaptureScreen from '../screens/RentMediaCaptureScreen';
 import ReviewFlowScreen from '../screens/ReviewFlowScreen';
+import ChatListScreen from '../screens/ChatListScreen';
+import ChatScreen from '../screens/ChatScreen';
 
 const Stack = createStackNavigator();
 
@@ -106,6 +108,20 @@ const AppNavigator = () => {
         {() => (
           <ScreenWrapper>
             <AccountScreen />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="ChatList" options={{ title: 'Conversas' }}>
+        {() => (
+          <ScreenWrapper>
+            <ChatListScreen />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="Chat" options={{ title: 'Chat' }}>
+        {() => (
+          <ScreenWrapper>
+            <ChatScreen />
           </ScreenWrapper>
         )}
       </Stack.Screen>

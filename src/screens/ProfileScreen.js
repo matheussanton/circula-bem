@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, SafeAreaView, Image } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchUserById } from '../services/api';
@@ -7,6 +8,7 @@ import ProfileImage from '../components/ProfileImage';
 import { maskCPF } from '../utils/cpfUtils';
 import { formatPhone } from '../utils/phoneUtils';
 import { getUserReviewTotalsByRole } from '../services/reviewService';
+import { LOGO_URL } from '../utils/brand';
 
 const ProfileScreen = () => {
   const [userData, setUserData] = useState(null);
@@ -70,7 +72,7 @@ const ProfileScreen = () => {
     <SafeAreaView style={styles.container}>
       {/* Header with Logo */}
       <View style={styles.header}>
-        <Image source={require('../../assets/logo.png')} style={styles.headerLogo} resizeMode="contain" />
+        <ExpoImage source={{ uri: LOGO_URL }} style={styles.headerLogo} contentFit="contain" />
         <Text style={styles.headerTitle}>Perfil</Text>
       </View>
       

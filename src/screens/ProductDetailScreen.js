@@ -8,6 +8,7 @@ import { fetchCategories } from '../services/categoryService';
 import { registerCallback } from '../services/callbackRegistry';
 import { v4 as uuidv4 } from 'uuid';
 import ProfileImage from '../components/ProfileImage';
+import UserProfileModal from '../components/UserProfileModal';
 import CategorySelect from '../components/CategorySelect';
 import { formatPrice } from '../utils/priceUtils';
 import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -26,6 +27,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [tempCenter, setTempCenter] = useState(null);
   const [tempRadius, setTempRadius] = useState(25);
   const [productTotals, setProductTotals] = useState(null);
+  const [profileVisible, setProfileVisible] = useState(false);
+  const [profileUserId, setProfileUserId] = useState(null);
 
   useEffect(() => {
     const loadProductDetails = async () => {
@@ -304,6 +307,16 @@ const ProductDetailScreen = ({ route, navigation }) => {
               <View style={styles.sellerInfo}>
                 <Text style={styles.sellerName}>{renter.first_name} {renter.last_name}</Text>
                 <Text style={styles.verifiedText}>Conta verificada</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setProfileUserId(renter.user_id);
+                    setProfileVisible(true);
+                  }}
+                  style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                >
+                  <MaterialCommunityIcons name="account-circle-outline" size={18} color="#4F8CFF" />
+                  <Text style={{ color: '#4F8CFF', fontWeight: '700' }}>Ver perfil</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -335,6 +348,14 @@ const ProductDetailScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <UserProfileModal
+        visible={profileVisible}
+        userId={profileUserId}
+        onClose={() => {
+          setProfileVisible(false);
+          setProfileUserId(null);
+        }}
+      />
     </SafeAreaView>
   );
 };
