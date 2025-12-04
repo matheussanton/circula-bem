@@ -34,6 +34,8 @@ const SearchResultsScreen = () => {
   const [query, setQuery] = useState(q);
   const [mapMode, setMapMode] = useState(false);
   const mapRef = useRef(null);
+  const jitterMapRef = useRef({});
+  const PRIVACY_RADIUS_METERS = 500; // raio para privacidade
 
   // Helpers para calcular distância (fallback local caso o serviço não compute)
   const deg2rad = (deg) => (deg * Math.PI) / 180;
@@ -140,6 +142,24 @@ const SearchResultsScreen = () => {
     })();
   }, []);
 
+  // Gera ponto aleatório (estável na sessão) dentro de raio PRIVACY_RADIUS_METERS
+  const getJitteredCoord = useCallback((lat, lng, id) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (jitterMapRef.current[id]) return jitterMapRef.current[id];
+    // método polar
+    const t = 2 * Math.PI * Math.random();
+    const u = Math.random() + Math.random();
+    const r = (u > 1 ? 2 - u : u); // [0,1]
+    const dist = r * PRIVACY_RADIUS_METERS;
+    const metersPerDegLat = 111320;
+    const metersPerDegLng = 111320 * Math.cos((lat * Math.PI) / 180) || 1;
+    const dLat = (Math.sin(t) * dist) / metersPerDegLat;
+    const dLng = (Math.cos(t) * dist) / metersPerDegLng;
+    const point = { latitude: lat + dLat, longitude: lng + dLng };
+    jitterMapRef.current[id] = point;
+    return point;
+  }, []);
+
   const renderItem = ({ item }) => (
     <ProductCard
       product={item}
@@ -198,6 +218,7 @@ const SearchResultsScreen = () => {
             />
           )}
           {markers.map(p => {
+            const jitter = getJitteredCoord(p.lat, p.lng, p.id);
             const preview =
               p.product_images?.find?.(img => img.image_url && img.image_url.endsWith('_0.jpg'))?.image_url ||
               p.product_images?.[0]?.image_url ||
@@ -205,7 +226,7 @@ const SearchResultsScreen = () => {
             return (
               <Marker
                 key={p.id}
-                coordinate={{ latitude: p.lat, longitude: p.lng }}
+                coordinate={jitter || { latitude: p.lat, longitude: p.lng }}
                 anchor={{ x: 0.5, y: 1 }}
                 tracksViewChanges={false}
               >

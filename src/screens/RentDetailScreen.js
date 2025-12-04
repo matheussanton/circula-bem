@@ -17,6 +17,7 @@ import { getRentById } from '../services/rentService';
 import { fetchUserById } from '../services/api';
 import ProfileImage from '../components/ProfileImage';
 import { maskCPF } from '../utils/cpfUtils';
+import { useRoute } from '@react-navigation/native';
 
 const RentDetailScreen = ({ route, navigation }) => {
   const { rentId } = route.params;
@@ -29,6 +30,7 @@ const RentDetailScreen = ({ route, navigation }) => {
   useEffect(() => {
     loadRentDetails();
   }, [rentId]);
+
 
   const loadRentDetails = async () => {
     try {

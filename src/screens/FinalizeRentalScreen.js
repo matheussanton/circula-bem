@@ -35,16 +35,21 @@ const FinalizeRentalScreen = ({ route }) => {
 
       // Criar um único aluguel com múltiplas datas
       // user_id deve ser do usuário logado (quem está alugando), não do proprietário
-      await createSingleRentalWithDates(
+      const created = await createSingleRentalWithDates(
         product.id, 
         currentUserId, // ID do usuário logado (locatário)
         selectedDates,
         product.price || 0
       );
-      
-      setShowRenterInfo(true);
-      setShowRentButton(false);
-      alert(`Aluguel confirmado para ${selectedDates.length} ${selectedDates.length === 1 ? 'dia' : 'dias'}!`);
+      const rentRow = Array.isArray(created) ? created[0] : (created?.[0] || created);
+      const rentId = rentRow?.id;
+
+      // Navega para o passo 3 (pagamento) com resumo do produto/locador
+      navigation.navigate('Payment', {
+        rentId,
+        product,
+        renter,
+      });
     } catch (error) {
       console.error('Erro ao confirmar aluguel:', error);
       alert('Erro ao confirmar aluguel. Tente novamente.');
@@ -109,7 +114,7 @@ const FinalizeRentalScreen = ({ route }) => {
       <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContainer}>
         {/* Header com indicação de etapa */}
         <View style={styles.header}>
-          <Text style={styles.stepText}>Etapa 2 de 2</Text>
+          <Text style={styles.stepText}>Etapa 2 de 3</Text>
           {/* Barra de progresso */}
           <View style={styles.progressBar}>
             <View style={styles.progressStepCompleted} />

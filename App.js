@@ -7,6 +7,7 @@ import { NativeBaseProvider, extendTheme } from 'native-base';
 import AppNavigator from './src/navigation/AppNavigator';
 import { useFonts, Roboto_400Regular, Roboto_700Bold } from '@expo-google-fonts/roboto';
 import { LogBox } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 LogBox.ignoreAllLogs();
 
@@ -67,6 +68,7 @@ export default function App() {
       <NavigationContainer linking={linking}>
         <AppNavigator />
       </NavigationContainer>
+      <Toast />
     </NativeBaseProvider>
   );
 }

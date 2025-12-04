@@ -31,6 +31,7 @@ import RentMediaCaptureScreen from '../screens/RentMediaCaptureScreen';
 import ReviewFlowScreen from '../screens/ReviewFlowScreen';
 import ChatListScreen from '../screens/ChatListScreen';
 import ChatScreen from '../screens/ChatScreen';
+import PaymentScreen from '../screens/PaymentScreen';
 
 const Stack = createStackNavigator();
 
@@ -122,6 +123,13 @@ const AppNavigator = () => {
         {() => (
           <ScreenWrapper>
             <ChatScreen />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="Payment" options={{ title: 'Pagamento' }}>
+        {() => (
+          <ScreenWrapper>
+            <PaymentScreen />
           </ScreenWrapper>
         )}
       </Stack.Screen>

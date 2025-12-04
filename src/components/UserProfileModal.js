@@ -137,7 +137,7 @@ const UserProfileModal = ({
                   <View style={styles.infoItem}>
                     <MaterialCommunityIcons name="home-outline" size={18} color="#4B5563" />
                     <Text style={styles.infoText}>
-                      {primaryAddress.street}, {primaryAddress.number} - {primaryAddress.neighborhood}
+                      {primaryAddress.street} - {primaryAddress.neighborhood}
                     </Text>
                   </View>
                 ) : null}
@@ -327,5 +327,8 @@ const styles = StyleSheet.create({
 });
 
 export default UserProfileModal;
+
+
+
 
 
